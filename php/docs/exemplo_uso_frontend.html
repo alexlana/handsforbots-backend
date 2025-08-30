@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exemplo de Uso MCP - Universal LLM Backend</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #fafafa;
+        }
+        
+        .section h2 {
+            color: #555;
+            margin-top: 0;
+        }
+        
+        .demo-area {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        
+        .chat-container {
+            height: 400px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            overflow-y: auto;
+            background: white;
+            margin-bottom: 15px;
+        }
+        
+        .message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        
+        .user-message {
+            background: #e3f2fd;
+            margin-left: 20%;
+        }
+        
+        .bot-message {
+            background: #f1f8e9;
+            margin-right: 20%;
+        }
+        
+        .tool-message {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+        }
+        
+        .input-area {
+            display: flex;
+            gap: 10px;
+        }
+        
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background: #2196f3;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        button:hover {
+            background: #1976d2;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .tools-info {
+            background: #e8f5e8;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        
+        .tool-item {
+            background: white;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 3px;
+            border-left: 3px solid #4caf50;
+        }
+        
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 3px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        
+        .scroll-demo {
+            height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 15px;
+            background: white;
+            margin: 15px 0;
+        }
+        
+        .scroll-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+        }
+        
+        .scroll-section.highlighted {
+            border-color: #ff9800;
+            background: #fff3e0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Exemplo de Uso MCP - Universal LLM Backend</h1>
+        
+        <div class="section">
+            <h2>📋 Informações do Sistema</h2>
+            <div id="systemInfo" class="status info">
+                Carregando informações do sistema...
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>🔧 Ferramentas MCP Disponíveis</h2>
+            <div id="toolsInfo" class="tools-info">
+                Carregando ferramentas...
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>💬 Chat com MCP</h2>
+            <div class="demo-area">
+                <div id="chatContainer" class="chat-container">
+                    <div class="message bot-message">
+                        Olá! Sou um assistente com acesso a ferramentas MCP. Posso ajudar você a navegar pelo conteúdo desta página ou buscar informações. O que você gostaria de fazer?
+                    </div>
+                </div>
+                
+                <div class="input-area">
+                    <input type="text" id="userInput" placeholder="Digite sua mensagem..." />
+                    <button onclick="sendMessage()" id="sendButton">Enviar</button>
+                </div>
+                
+                <div id="status" class="status" style="display: none;"></div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📄 Conteúdo Demonstrativo</h2>
+            <div class="scroll-demo">
+                <div class="scroll-section" data-section="docker">
+                    <h3>🐳 Docker</h3>
+                    <p>Docker é uma plataforma para desenvolver, enviar e executar aplicações em contêineres. Os contêineres são unidades padronizadas de software que empacotam código e todas as suas dependências para que a aplicação seja executada de forma rápida e confiável de um ambiente de computação para outro.</p>
+                    <p>Principais benefícios do Docker:</p>
+                    <ul>
+                        <li>Isolamento de aplicações</li>
+                        <li>Portabilidade entre ambientes</li>
+                        <li>Facilidade de deploy</li>
+                        <li>Versionamento de imagens</li>
+                    </ul>
+                </div>
+                
+                <div class="scroll-section" data-section="php">
+                    <h3>🐘 PHP</h3>
+                    <p>PHP é uma linguagem de script de uso geral especialmente adequada para desenvolvimento web. Foi criada por Rasmus Lerdorf em 1994 e é amplamente utilizada para criar sites dinâmicos.</p>
+                    <p>Características do PHP:</p>
+                    <ul>
+                        <li>Linguagem interpretada</li>
+                        <li>Fácil de aprender</li>
+                        <li>Ampla documentação</li>
+                        <li>Grande comunidade</li>
+                    </ul>
+                </div>
+                
+                <div class="scroll-section" data-section="javascript">
+                    <h3>☕ JavaScript</h3>
+                    <p>JavaScript é uma linguagem de programação interpretada, de alto nível e dinâmica. É uma das três principais tecnologias da World Wide Web, junto com HTML e CSS.</p>
+                    <p>Usos do JavaScript:</p>
+                    <ul>
+                        <li>Desenvolvimento frontend</li>
+                        <li>Aplicações web dinâmicas</li>
+                        <li>Desenvolvimento mobile</li>
+                        <li>Desenvolvimento backend (Node.js)</li>
+                    </ul>
+                </div>
+                
+                <div class="scroll-section" data-section="python">
+                    <h3>🐍 Python</h3>
+                    <p>Python é uma linguagem de programação de alto nível, interpretada, de script, imperativa, orientada a objetos, funcional, de tipagem dinâmica e forte.</p>
+                    <p>Aplicações do Python:</p>
+                    <ul>
+                        <li>Desenvolvimento web</li>
+                        <li>Ciência de dados</li>
+                        <li>Inteligência artificial</li>
+                        <li>Automação</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📊 Logs de Execução</h2>
+            <div id="logs" class="demo-area">
+                <pre id="logContent">Aguardando logs...</pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuração
+        const BACKEND_URL = 'http://localhost:8080/universal_llm_backend.php';
+        const API_KEY = null; // Configure sua API key se necessário
+        
+        // Estado da aplicação
+        let availableTools = [];
+        let sessionId = 'session_' + Date.now();
+        
+        // Elementos DOM
+        const chatContainer = document.getElementById('chatContainer');
+        const userInput = document.getElementById('userInput');
+        const sendButton = document.getElementById('sendButton');
+        const status = document.getElementById('status');
+        const systemInfo = document.getElementById('systemInfo');
+        const toolsInfo = document.getElementById('toolsInfo');
+        const logContent = document.getElementById('logContent');
+        
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initializeSystem();
+        });
+        
+        // Função de inicialização
+        async function initializeSystem() {
+            try {
+                log('Inicializando sistema...');
+                
+                // Carregar informações do sistema
+                const systemData = await fetchSystemInfo();
+                displaySystemInfo(systemData);
+                
+                // Carregar ferramentas MCP
+                const toolsData = await fetchMCPTools();
+                displayToolsInfo(toolsData);
+                
+                log('Sistema inicializado com sucesso!');
+                showStatus('Sistema pronto!', 'success');
+                
+            } catch (error) {
+                log('Erro na inicialização: ' + error.message);
+                showStatus('Erro na inicialização: ' + error.message, 'error');
+            }
+        }
+        
+        // Buscar informações do sistema
+        async function fetchSystemInfo() {
+            const response = await fetch(BACKEND_URL, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            return await response.json();
+        }
+        
+        // Buscar ferramentas MCP
+        async function fetchMCPTools() {
+            const response = await fetch(BACKEND_URL, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            availableTools = data.mcp?.tools || [];
+            return data;
+        }
+        
+        // Exibir informações do sistema
+        function displaySystemInfo(data) {
+            systemInfo.innerHTML = `
+                <strong>Status:</strong> ${data.mcp?.enabled ? '✅ MCP Habilitado' : '❌ MCP Desabilitado'}<br>
+                <strong>Timestamp:</strong> ${data.timestamp}<br>
+                <strong>Ferramentas Padrão:</strong> ${data.mcp?.tools?.length || 0}<br>
+                <strong>Ferramenta ShowRelevantContent:</strong> ${data.mcp?.show_relevant_content_tool ? '✅ Disponível' : '❌ Não disponível'}
+            `;
+        }
+        
+        // Exibir informações das ferramentas
+        function displayToolsInfo(data) {
+            let toolsHtml = '<h4>Ferramentas Disponíveis:</h4>';
+            
+            if (data.mcp?.tools) {
+                data.mcp.tools.forEach(tool => {
+                    toolsHtml += `
+                        <div class="tool-item">
+                            <strong>${tool.name}</strong><br>
+                            <em>${tool.description}</em><br>
+                            <small>Parâmetros: ${JSON.stringify(tool.parameters)}</small>
+                        </div>
+                    `;
+                });
+            }
+            
+            if (data.mcp?.show_relevant_content_tool) {
+                const tool = data.mcp.show_relevant_content_tool;
+                toolsHtml += `
+                    <div class="tool-item">
+                        <strong>${tool.name}</strong><br>
+                        <em>${tool.description}</em><br>
+                        <small>Parâmetros: ${JSON.stringify(tool.parameters)}</small>
+                    </div>
+                `;
+            }
+            
+            toolsInfo.innerHTML = toolsHtml;
+        }
+        
+        // Enviar mensagem
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (!message) return;
+            
+            // Adicionar mensagem do usuário
+            addMessage(message, 'user');
+            userInput.value = '';
+            sendButton.disabled = true;
+            
+            try {
+                showStatus('Processando...', 'info');
+                log('Enviando mensagem: ' + message);
+                
+                // Preparar requisição
+                const requestData = {
+                    provider: 'openai',
+                    model: 'gpt-3.5-turbo',
+                    messages: [
+                        {
+                            role: 'user',
+                            content: message
+                        }
+                    ],
+                    parameters: {
+                        max_tokens: 1024,
+                        temperature: 0.7,
+                        top_p: 0.9
+                    },
+                    context: {
+                        mcp_context: {
+                            tools: [
+                                {
+                                    name: 'show_relevant_content',
+                                    description: 'Show content relevant to the user question',
+                                    parameters: {
+                                        type: 'object',
+                                        properties: {
+                                            query: {
+                                                type: 'string',
+                                                description: 'The query to find the element',
+                                                enum: ['docker', 'php', 'javascript', 'python']
+                                            }
+                                        },
+                                        required: ['query']
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                };
+                
+                // Enviar para o backend
+                const response = await fetch(BACKEND_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json; charset=UTF-8',
+                        'X-Request-ID': 'req_' + Date.now(),
+                        'X-Session-ID': sessionId,
+                        ...(API_KEY && { 'X-API-Key': API_KEY })
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                log('Resposta recebida: ' + JSON.stringify(data, null, 2));
+                
+                // Processar resposta
+                if (data.response) {
+                    if (Array.isArray(data.response)) {
+                        // Resposta com tool calls
+                        data.response.forEach(item => {
+                            if (item.type === 'tool_execution') {
+                                addMessage(item.text, 'tool');
+                                
+                                // Executar ação no frontend se necessário
+                                if (item.tool_result?.action === 'scroll_to_content') {
+                                    scrollToSection(item.tool_result.query);
+                                }
+                            } else {
+                                addMessage(item.text, 'bot');
+                            }
+                        });
+                    } else {
+                        // Resposta simples
+                        addMessage(data.response, 'bot');
+                    }
+                }
+                
+                showStatus('Mensagem processada com sucesso!', 'success');
+                
+            } catch (error) {
+                log('Erro ao enviar mensagem: ' + error.message);
+                addMessage('Desculpe, ocorreu um erro ao processar sua mensagem.', 'bot');
+                showStatus('Erro: ' + error.message, 'error');
+            } finally {
+                sendButton.disabled = false;
+            }
+        }
+        
+        // Adicionar mensagem ao chat
+        function addMessage(text, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}-message`;
+            
+            if (type === 'tool') {
+                messageDiv.className += ' tool-message';
+            }
+            
+            messageDiv.textContent = text;
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        // Rolar para seção específica
+        function scrollToSection(query) {
+            const section = document.querySelector(`[data-section="${query}"]`);
+            if (section) {
+                // Remover highlight anterior
+                document.querySelectorAll('.scroll-section').forEach(s => {
+                    s.classList.remove('highlighted');
+                });
+                
+                // Adicionar highlight e rolar
+                section.classList.add('highlighted');
+                section.scrollIntoView({ behavior: 'smooth' });
+                
+                log(`Rolando para seção: ${query}`);
+                
+                // Remover highlight após 3 segundos
+                setTimeout(() => {
+                    section.classList.remove('highlighted');
+                }, 3000);
+            } else {
+                log(`Seção não encontrada: ${query}`);
+            }
+        }
+        
+        // Mostrar status
+        function showStatus(message, type) {
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+            
+            setTimeout(() => {
+                status.style.display = 'none';
+            }, 5000);
+        }
+        
+        // Log
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            logContent.textContent += `[${timestamp}] ${message}\n`;
+            logContent.scrollTop = logContent.scrollHeight;
+        }
+        
+        // Event listeners
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>

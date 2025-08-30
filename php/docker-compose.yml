@@ -1,0 +1,40 @@
+services:
+  php_server:
+    image: php:8.2-apache
+    container_name: alx-chatbot-backend
+    volumes:
+      - ./app:/var/www/html
+      - ./logs:/var/log/apache2
+      - ./llm_logs:/tmp/llm_logs
+      - ./php_errors:/tmp/php_errors
+    ports:
+      - "8081:80"  # Mudando para porta 8081 para evitar conflito
+    networks:
+      - teste-docker_alxbotnet  # Usando a rede correta do repositório principal
+    environment:
+      - PHP_INI_SCAN_DIR=/usr/local/etc/php/conf.d:/app/php.ini
+      - DEBUG_MODE=true
+      - LOG_LEVEL=info
+      - OLLAMA_ENDPOINT=http://host.docker.internal:11434
+      - GOOGLE_API_KEY=***REMOVED***
+    working_dir: /app
+    # command: >
+    #   sh -c "
+    #     apk add --no-cache apache2 php-apache2 curl-dev &&
+    #     docker-php-ext-install curl &&
+    #     echo 'extension=curl.so' >> /usr/local/etc/php/conf.d/curl.ini &&
+    #     echo 'ServerName localhost' >> /etc/apache2/httpd.conf &&
+    #     echo 'DocumentRoot /app' >> /etc/apache2/httpd.conf &&
+    #     echo 'DirectoryIndex index.php' >> /etc/apache2/httpd.conf &&
+    #     echo '<Directory /app>' >> /etc/apache2/httpd.conf &&
+    #     echo '  AllowOverride All' >> /etc/apache2/httpd.conf &&
+    #     echo '  Require all granted' >> /etc/apache2/httpd.conf &&
+    #     echo '</Directory>' >> /etc/apache2/httpd.conf &&
+    #     echo 'LoadModule rewrite_module modules/mod_rewrite.so' >> /etc/apache2/httpd.conf &&
+    #     httpd -D FOREGROUND
+    #   "
+
+networks:
+  teste-docker_alxbotnet:
+    external: true  # Usando rede externa já criada pelo repositório principal
+

@@ -1,0 +1,126 @@
+{
+  "titulo": "WordPress na Google Cloud Platform (GCP) com Docker, Cloud Run e Cloud Storage",
+  "autor": "Alex Lana",
+  "arquivo_completo": "artigo-wordpress-gcp.md",
+  "secoes": [
+    {
+      "id": "introducao",
+      "titulo": "Introdução",
+      "descricao": "Visão geral da solução WordPress na GCP",
+      "palavras_chave": ["WordPress", "GCP", "Docker", "Cloud Run", "Cloud Storage"]
+    },
+    {
+      "id": "requisitos",
+      "titulo": "Requisitos",
+      "descricao": "Contas e instalações necessárias",
+      "palavras_chave": ["GCP", "GitHub", "Docker", "Git CLI", "domínio"]
+    },
+    {
+      "id": "projeto-github",
+      "titulo": "Use o projeto do GitHub",
+      "descricao": "Como fazer fork e configurar o projeto",
+      "palavras_chave": ["GitHub", "fork", "Git CLI", "GitHub Desktop"]
+    },
+    {
+      "id": "rodar-localmente",
+      "titulo": "Para rodar localmente",
+      "descricao": "Configuração e execução local com Docker",
+      "palavras_chave": ["Docker", "docker-compose", "localhost", "WordPress local"]
+    },
+    {
+      "id": "preparar-gcp",
+      "titulo": "Na GCP, primeiro prepare os serviços",
+      "descricao": "Configuração inicial dos serviços GCP",
+      "palavras_chave": ["Cloud Storage", "Cloud Build", "Cloud SQL", "VPC", "IAM"]
+    },
+    {
+      "id": "configurar-cloud-run",
+      "titulo": "Configure o Cloud Run",
+      "descricao": "Configuração do serviço principal",
+      "palavras_chave": ["Cloud Run", "Cloud Build", "variáveis de ambiente", "conexões"]
+    },
+    {
+      "id": "carregar-dados",
+      "titulo": "Carregando os dados",
+      "descricao": "Migração de banco e arquivos",
+      "palavras_chave": ["migração", "banco de dados", "uploads", "Cloud Storage", "Cloud SQL"]
+    },
+    {
+      "id": "configurar-wordpress",
+      "titulo": "Faça as últimas configurações no WordPress",
+      "descricao": "Configuração do plugin WP-Stateless",
+      "palavras_chave": ["WP-Stateless", "bucket", "mídia", "WordPress admin"]
+    },
+    {
+      "id": "servicos-adicionais",
+      "titulo": "Serviços para melhorar a performance e a segurança",
+      "descricao": "Load Balancing, CDN e rede interna",
+      "palavras_chave": ["Load Balancing", "CDN", "VPC", "certificado SSL", "DNS"]
+    },
+    {
+      "id": "gitops",
+      "titulo": "Sobre GitOps",
+      "descricao": "Estratégias de atualização e versionamento",
+      "palavras_chave": ["GitOps", "atualizações", "staging", "produção", "rollback"]
+    },
+    {
+      "id": "escolhas",
+      "titulo": "Sobre as escolhas feitas",
+      "descricao": "Justificativas técnicas das decisões",
+      "palavras_chave": ["Bitnami", "cold start", "segurança", "entrypoints"]
+    },
+    {
+      "id": "troubleshooting",
+      "titulo": "Troubleshooting",
+      "descricao": "Soluções para problemas comuns",
+      "palavras_chave": ["erro 502", "conexão banco", "imagens", "problemas"]
+    }
+  ],
+  "links_importantes": [
+    {
+      "titulo": "Projeto GitHub",
+      "url": "https://github.com/alexlana/alx-wp-gcp",
+      "descricao": "Repositório com o código fonte"
+    },
+    {
+      "titulo": "Console GCP",
+      "url": "https://console.cloud.google.com",
+      "descricao": "Interface principal da Google Cloud Platform"
+    },
+    {
+      "titulo": "Cloud Run",
+      "url": "https://console.cloud.google.com/run",
+      "descricao": "Serviço principal para deploy"
+    },
+    {
+      "titulo": "Cloud Storage",
+      "url": "https://console.cloud.google.com/storage/browser",
+      "descricao": "Armazenamento de arquivos"
+    },
+    {
+      "titulo": "Cloud SQL",
+      "url": "https://console.cloud.google.com/sql",
+      "descricao": "Banco de dados MySQL"
+    }
+  ],
+  "configuracoes_padrao": {
+    "bucket_nome": "alx-wp-gcp",
+    "database_nome": "alx-wp-gcp",
+    "database_usuario": "alx-wp-gcp",
+    "conta_servico": "alx-wp-gcp-stateless",
+    "regiao": "us (várias regições dos Estados Unidos)",
+    "classe_armazenamento": "Coldline"
+  },
+  "custos_importantes": [
+    "Cloud SQL (maior custo)",
+    "Load Balancing (custo extra)",
+    "CDN (custo extra)",
+    "VPC Connector (custo extra)"
+  ],
+  "seguranca": [
+    "Repositório Git deve ser privado",
+    "Trocar credenciais padrão do WordPress",
+    "Configurar IPs específicos para Cloud SQL",
+    "Usar Secret Manager para senhas"
+  ]
+}
