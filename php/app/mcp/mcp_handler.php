@@ -171,11 +171,12 @@ function executeToolCalls($toolCalls, $availableTools) {
             'result' => [
                 'success' => true,
                 'message' => "Frontend tool execution requested: $toolName",
-                'action' => 'scroll_to_content', // Specific action for show_relevant_content
+                'action' => 'execute_tool', // Specific action for show_relevant_content
                 'tool_name' => $toolName,
                 'parameters' => $parameters,
                 'execution_type' => 'frontend',
                 'query' => $parameters['query'] ?? null, // Extract query for frontend
+                'title' => $parameters['title'] ?? null, // Extract title for frontend
                 'timestamp' => date('Y-m-d H:i:s')
             ],
             'success' => true,
@@ -282,6 +283,7 @@ function processMCPResponse($responseText, $toolCalls, $toolResults) {
                     'tool_result' => [
                         'action' => $result['action'],
                         'query' => $result['query'],
+                        'title' => $result['title'],
                         'tool_name' => $result['tool_name'],
                         'parameters' => $result['parameters']
                     ],
