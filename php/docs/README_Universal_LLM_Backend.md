@@ -9,7 +9,7 @@ O **Universal LLM Backend** é uma solução que padroniza a comunicação com d
 ```
 Frontend JavaScript (UniversalLLMBackend.js)
            ↓
-    Formato Universal
+    Formato Universal + Histórico de Conversas
            ↓
 Backend PHP (universal_llm_backend.php)
            ↓
@@ -17,6 +17,10 @@ Backend PHP (universal_llm_backend.php)
            ↓
     OpenAI | Anthropic | Google | Ollama | etc.
 ```
+
+## Documentação Adicional
+
+- **[Processamento de Histórico de Conversas](../../docs/CONVERSATION_HISTORY.md)** - Como o sistema mantém e envia contexto de conversas para os LLMs
 
 ## Formato Universal de Requisição
 
