@@ -56,6 +56,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 // Handle different HTTP methods
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    // Check if this is a session ID request
+    $requestUri = $_SERVER['REQUEST_URI'] ?? '';
+    $path = parse_url($requestUri, PHP_URL_PATH);
+    
+    if (str_ends_with($path, '/session')) {
+        // Generate and return a new session ID
+        $sessionId = generateSessionId();
+        $response = [
+            'session_id' => $sessionId,
+            'timestamp' => date('Y-m-d H:i:s')
+        ];
+        
+        logSecurityEvent('session_id_generated', [
+            'session_id' => $sessionId
+        ]);
+        
+        echo json_encode($response);
+        exit();
+    }
+    
     // GET request for MCP tools info
     $response = [
         'mcp' => [
@@ -430,6 +450,24 @@ function validateRequestSize() {
     if ($contentLength > $maxSize) {
         throw new Exception('Request too large');
     }
+}
+
+/**
+ * Generate a unique session ID for conversation tracking
+ * 
+ * @return string Session ID
+ */
+function generateSessionId() {
+    // Generate a secure session ID using multiple sources of entropy
+    $timestamp = microtime(true);
+    $random = bin2hex(random_bytes(16));
+    $serverEntropy = hash('sha256', $_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_TIME_FLOAT']);
+    
+    // Combine all sources and create a hash
+    $sessionData = $timestamp . '_' . $random . '_' . substr($serverEntropy, 0, 8);
+    $sessionId = 'session_' . hash('sha256', $sessionData);
+    
+    return substr($sessionId, 0, 32); // Limit to 32 characters for readability
 }
 
 /**
