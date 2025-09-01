@@ -569,27 +569,23 @@ function processUniversalRequest($request, $requestId, $sessionId) {
     if (!empty($availableTools) && isset($llmResponse['response'])) {
         $responseText = $llmResponse['response'];
         $toolCalls = extractToolCalls($responseText);
-        
+
         if (!empty($toolCalls)) {
             // Execute tool calls
             $toolResults = executeToolCalls($toolCalls, $availableTools);
-            
+
             // Process response with tool results
             $processedResponse = processMCPResponse($responseText, $toolCalls, $toolResults);
-            
             // Return processed response with tool results
-            return [
-                'response' => $processedResponse,
-                'metadata' => array_merge($llmResponse['metadata'] ?? [], [
-                    'mcp_processed' => true,
-                    'tool_calls' => $toolCalls,
-                    'tool_results' => $toolResults
-                ])
-            ];
+            return $processedResponse;
         }
     }
-    
-    return $llmResponse;
+
+    return [[
+        'recipient_id' => 'user',
+        'text' => $llmResponse['response'],
+        'metadata' => $llmResponse['metadata'] ?? []
+    ]];
 }
 
 /**

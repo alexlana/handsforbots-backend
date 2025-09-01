@@ -14,21 +14,6 @@ services:
     env_file:
       - .env
     working_dir: /app
-    # command: >
-    #   sh -c "
-    #     apk add --no-cache apache2 php-apache2 curl-dev &&
-    #     docker-php-ext-install curl &&
-    #     echo 'extension=curl.so' >> /usr/local/etc/php/conf.d/curl.ini &&
-    #     echo 'ServerName localhost' >> /etc/apache2/httpd.conf &&
-    #     echo 'DocumentRoot /app' >> /etc/apache2/httpd.conf &&
-    #     echo 'DirectoryIndex index.php' >> /etc/apache2/httpd.conf &&
-    #     echo '<Directory /app>' >> /etc/apache2/httpd.conf &&
-    #     echo '  AllowOverride All' >> /etc/apache2/httpd.conf &&
-    #     echo '  Require all granted' >> /etc/apache2/httpd.conf &&
-    #     echo '</Directory>' >> /etc/apache2/httpd.conf &&
-    #     echo 'LoadModule rewrite_module modules/mod_rewrite.so' >> /etc/apache2/httpd.conf &&
-    #     httpd -D FOREGROUND
-    #   "
 
 networks:
   teste-docker_alxbotnet:
