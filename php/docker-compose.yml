@@ -11,12 +11,8 @@ services:
       - "8081:80"  # Mudando para porta 8081 para evitar conflito
     networks:
       - teste-docker_alxbotnet  # Usando a rede correta do repositório principal
-    environment:
-      - PHP_INI_SCAN_DIR=/usr/local/etc/php/conf.d:/app/php.ini
-      - DEBUG_MODE=true
-      - LOG_LEVEL=info
-      - OLLAMA_ENDPOINT=http://host.docker.internal:11434
-      - GOOGLE_API_KEY=***REMOVED***
+    env_file:
+      - .env
     working_dir: /app
     # command: >
     #   sh -c "
