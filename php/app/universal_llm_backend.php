@@ -663,6 +663,12 @@ function callOpenAI($model, $messages, $parameters, $context, $options) {
     // Add conversation history if available
     if (isset($context['conversation_history']) && !empty($context['conversation_history'])) {
         $openaiParams['messages'] = array_merge($context['conversation_history'], $openaiParams['messages']);
+        logSecurityEvent('openai_conversation_history_added', [
+            'provider' => 'openai',
+            'model' => $model,
+            'history_count' => count($context['conversation_history']),
+            'session_id' => $_SERVER['HTTP_X_SESSION_ID'] ?? null
+        ]);
     }
     
     // Make API call
@@ -703,7 +709,7 @@ function callAnthropic($model, $messages, $parameters, $context, $options) {
     ];
     
     // Build prompt for Anthropic
-    $prompt = buildAnthropicPrompt($messages, $context);
+    $prompt = buildPromptForProvider($messages, $context, 'anthropic');
     $anthropicParams['prompt'] = $prompt;
     
     // Make API call
@@ -735,9 +741,26 @@ function callGoogle($model, $messages, $parameters, $context, $options) {
         throw new Exception('Google API key not configured');
     }
     
+    // Prepare all messages including conversation history
+    $allMessages = [];
+    
+    // Add conversation history if available
+    if (isset($context['conversation_history']) && !empty($context['conversation_history'])) {
+        $allMessages = array_merge($allMessages, $context['conversation_history']);
+        logSecurityEvent('google_conversation_history_added', [
+            'provider' => 'google',
+            'model' => $model,
+            'history_count' => count($context['conversation_history']),
+            'session_id' => $_SERVER['HTTP_X_SESSION_ID'] ?? null
+        ]);
+    }
+    
+    // Add current messages
+    $allMessages = array_merge($allMessages, $messages);
+    
     // Map universal parameters to Google format
     $googleParams = [
-        'contents' => mapMessagesToGoogle($messages),
+        'contents' => mapMessagesToGoogle($allMessages),
         'generationConfig' => [
             'maxOutputTokens' => $parameters['max_tokens'] ?? 1024,
             'temperature' => $parameters['temperature'] ?? 0.7,
@@ -776,7 +799,7 @@ function callOllama($model, $messages, $parameters, $context, $options) {
     // Map universal parameters to Ollama format
     $ollamaParams = [
         'model' => $model === 'auto' ? 'llama2' : $model,
-        'prompt' => buildOllamaPrompt($messages, $context),
+        'prompt' => buildPromptForProvider($messages, $context, 'ollama'),
         'stream' => $parameters['stream'] ?? false,
         'options' => [
             'num_ctx' => 2048,
@@ -848,58 +871,60 @@ function mapMessagesToGoogle($messages) {
 }
 
 /**
- * Build Anthropic prompt
+ * Build prompt for text-based providers (Anthropic, Ollama)
  */
-function buildAnthropicPrompt($messages, $context) {
+function buildPromptForProvider($messages, $context, $provider) {
+    $formats = [
+        'anthropic' => [
+            'system_prefix' => "\n\nHuman: ",
+            'system_suffix' => "\n\nAssistant: I understand. I'll follow these instructions.",
+            'message_format' => "\n\n%s: %s",
+            'final_suffix' => "\n\nAssistant:"
+        ],
+        'ollama' => [
+            'system_prefix' => "System: ",
+            'system_suffix' => "\n\n",
+            'message_format' => "%s: %s\n",
+            'final_suffix' => ""
+        ]
+    ];
+    
+    $format = $formats[$provider] ?? $formats['ollama']; // Default fallback
     $prompt = "";
     
     // Add system prompt if available
     if (isset($context['system_prompt']) && $context['system_prompt']) {
-        $prompt .= "\n\nHuman: " . $context['system_prompt'];
-        $prompt .= "\n\nAssistant: I understand. I'll follow these instructions.";
+        $prompt .= $format['system_prefix'] . $context['system_prompt'] . $format['system_suffix'];
     }
     
     // Add conversation history
     if (isset($context['conversation_history']) && !empty($context['conversation_history'])) {
         foreach ($context['conversation_history'] as $msg) {
-            $prompt .= "\n\n" . ucfirst($msg['role']) . ": " . $msg['content'];
+            $prompt .= sprintf($format['message_format'], ucfirst($msg['role']), $msg['content']);
         }
+        logConversationHistory($provider, $context['conversation_history']);
     }
     
     // Add current messages
     foreach ($messages as $message) {
-        $prompt .= "\n\n" . ucfirst($message['role']) . ": " . $message['content'];
+        $prompt .= sprintf($format['message_format'], ucfirst($message['role']), $message['content']);
     }
     
-    $prompt .= "\n\nAssistant:";
-    return $prompt;
+    return $prompt . $format['final_suffix'];
 }
 
 /**
- * Build Ollama prompt
+ * Log conversation history for providers
  */
-function buildOllamaPrompt($messages, $context) {
-    $prompt = "";
-    
-    // Add system prompt if available
-    if (isset($context['system_prompt']) && $context['system_prompt']) {
-        $prompt .= "System: " . $context['system_prompt'] . "\n\n";
-    }
-    
-    // Add conversation history
-    if (isset($context['conversation_history']) && !empty($context['conversation_history'])) {
-        foreach ($context['conversation_history'] as $msg) {
-            $prompt .= ucfirst($msg['role']) . ": " . $msg['content'] . "\n";
-        }
-    }
-    
-    // Add current messages
-    foreach ($messages as $message) {
-        $prompt .= ucfirst($message['role']) . ": " . $message['content'] . "\n";
-    }
-    
-    return $prompt;
+function logConversationHistory($provider, $history) {
+    logSecurityEvent($provider . '_conversation_history_added', [
+        'provider' => $provider,
+        'history_count' => count($history),
+        'session_id' => $_SERVER['HTTP_X_SESSION_ID'] ?? null
+    ]);
 }
+
+
 
 /**
  * Make secure HTTP request
@@ -1034,95 +1059,102 @@ function makeHttpRequest($url, $options) {
 }
 
 /**
- * Map OpenAI response to universal format
+ * Get nested value from array using dot notation
  */
-function mapOpenAIResponseToUniversal($response) {
-    if (!isset($response['choices'][0]['message']['content'])) {
-        logLLMError('openai_invalid_response_format', [
-            'provider' => 'openai',
+function getNestedValue($array, $path) {
+    $keys = explode('.', $path);
+    $value = $array;
+    foreach ($keys as $key) {
+        if (!isset($value[$key])) return null;
+        $value = $value[$key];
+    }
+    return $value;
+}
+
+/**
+ * Map provider response to universal format
+ */
+function mapResponseToUniversal($response, $provider) {
+    $mappings = [
+        'openai' => [
+            'response_path' => 'choices.0.message.content',
+            'metadata' => [
+                'model' => 'model',
+                'usage' => 'usage',
+                'finish_reason' => 'choices.0.finish_reason'
+            ]
+        ],
+        'anthropic' => [
+            'response_path' => 'completion',
+            'metadata' => [
+                'model' => 'model',
+                'stop_reason' => 'stop_reason'
+            ]
+        ],
+        'google' => [
+            'response_path' => 'candidates.0.content.parts.0.text',
+            'metadata' => [
+                'finish_reason' => 'candidates.0.finishReason',
+                'usage_metadata' => 'usageMetadata'
+            ]
+        ],
+        'ollama' => [
+            'response_path' => 'response',
+            'metadata' => [
+                'model' => 'model',
+                'done' => 'done'
+            ]
+        ]
+    ];
+    
+    $mapping = $mappings[$provider];
+    $responseText = getNestedValue($response, $mapping['response_path']);
+    
+    if (!$responseText) {
+        logLLMError($provider . '_invalid_response_format', [
+            'provider' => $provider,
             'response' => $response,
-            'error' => 'Invalid OpenAI response format - missing choices[0].message.content'
+            'error' => "Invalid $provider response format - missing " . $mapping['response_path']
         ]);
-        throw new Exception('Invalid OpenAI response format');
+        throw new Exception("Invalid $provider response format");
+    }
+    
+    $metadata = ['provider' => $provider];
+    foreach ($mapping['metadata'] as $key => $path) {
+        $metadata[$key] = getNestedValue($response, $path);
     }
     
     return [
-        'response' => $response['choices'][0]['message']['content'],
-        'metadata' => [
-            'provider' => 'openai',
-            'model' => $response['model'] ?? null,
-            'usage' => $response['usage'] ?? null,
-            'finish_reason' => $response['choices'][0]['finish_reason'] ?? null
-        ]
+        'response' => $responseText,
+        'metadata' => $metadata
     ];
+}
+
+/**
+ * Map OpenAI response to universal format
+ */
+function mapOpenAIResponseToUniversal($response) {
+    return mapResponseToUniversal($response, 'openai');
 }
 
 /**
  * Map Anthropic response to universal format
  */
 function mapAnthropicResponseToUniversal($response) {
-    if (!isset($response['completion'])) {
-        logLLMError('anthropic_invalid_response_format', [
-            'provider' => 'anthropic',
-            'response' => $response,
-            'error' => 'Invalid Anthropic response format - missing completion field'
-        ]);
-        throw new Exception('Invalid Anthropic response format');
-    }
-    
-    return [
-        'response' => $response['completion'],
-        'metadata' => [
-            'provider' => 'anthropic',
-            'model' => $response['model'] ?? null,
-            'stop_reason' => $response['stop_reason'] ?? null
-        ]
-    ];
+    return mapResponseToUniversal($response, 'anthropic');
 }
 
 /**
  * Map Google response to universal format
  */
 function mapGoogleResponseToUniversal($response) {
-    if (!isset($response['candidates'][0]['content']['parts'][0]['text'])) {
-        logLLMError('google_invalid_response_format', [
-            'provider' => 'google',
-            'response' => $response,
-            'error' => 'Invalid Google response format - missing candidates[0].content.parts[0].text'
-        ]);
-        throw new Exception('Invalid Google response format');
-    }
-    
-    return [
-        'response' => $response['candidates'][0]['content']['parts'][0]['text'],
-        'metadata' => [
-            'provider' => 'google',
-            'finish_reason' => $response['candidates'][0]['finishReason'] ?? null,
-            'usage_metadata' => $response['usageMetadata'] ?? null
-        ]
-    ];
+    return mapResponseToUniversal($response, 'google');
 }
 
 /**
  * Map Ollama response to universal format
  */
 function mapOllamaResponseToUniversal($response) {
-    if (!isset($response['response'])) {
-        logLLMError('ollama_invalid_response_format', [
-            'provider' => 'ollama',
-            'response' => $response,
-            'error' => 'Invalid Ollama response format - missing response field'
-        ]);
-        throw new Exception('Invalid Ollama response format');
-    }
-    
-    return [
-        'response' => $response['response'],
-        'metadata' => [
-            'provider' => 'ollama',
-            'model' => $response['model'] ?? null,
-            'done' => $response['done'] ?? false
-        ]
-    ];
+    return mapResponseToUniversal($response, 'ollama');
 }
 

@@ -116,75 +116,85 @@ function extractToolCalls($responseText) {
  * @return array Array of tool execution results
  */
 function executeToolCalls($toolCalls, $availableTools) {
-    $backendResults = [];
-    $frontendTools = [];
+    $results = [];
     
-    // Separate backend and frontend tools
     foreach ($toolCalls as $toolCall) {
         $toolName = $toolCall['name'] ?? '';
         $parameters = $toolCall['parameters'] ?? [];
         
-        // Check if tool is configured in backend (mcp_config.php)
-        $toolConfig = getMCPToolConfigurationByName($toolName);
-        
-        if ($toolConfig) {
-            // Backend tool - execute it
-            try {
-                $result = executeMCPToolByName($toolName, $parameters);
-                $backendResults[] = [
-                    'tool' => $toolName,
-                    'parameters' => $parameters,
-                    'result' => $result,
-                    'success' => $result['success'] !== false,
-                    'execution_type' => 'backend'
-                ];
-            } catch (Exception $e) {
-                $backendResults[] = [
-                    'tool' => $toolName,
-                    'parameters' => $parameters,
-                    'result' => [
-                        'success' => false,
-                        'error' => $e->getMessage()
-                    ],
-                    'success' => false,
-                    'execution_type' => 'backend'
-                ];
-            }
-        } else {
-            // Frontend tool - add to frontend tools list
-            $frontendTools[] = [
-                'tool' => $toolName,
-                'parameters' => $parameters,
-                'execution_type' => 'frontend'
-            ];
-        }
+        $result = isBackendTool($toolName) 
+            ? executeBackendTool($toolName, $parameters)
+            : createFrontendToolResult($toolName, $parameters);
+            
+        $results[] = $result;
     }
     
-    // Process frontend tools
-    foreach ($frontendTools as $frontendTool) {
-        $toolName = $frontendTool['tool'];
-        $parameters = $frontendTool['parameters'];
-        
-        $backendResults[] = [
+    return $results;
+}
+
+/**
+ * Check if tool is configured as backend tool
+ * @param string $toolName Tool name
+ * @return bool True if backend tool
+ */
+function isBackendTool($toolName) {
+    return getMCPToolConfigurationByName($toolName) !== null;
+}
+
+/**
+ * Execute backend tool
+ * @param string $toolName Tool name
+ * @param array $parameters Tool parameters
+ * @return array Execution result
+ */
+function executeBackendTool($toolName, $parameters) {
+    try {
+        $result = executeMCPToolByName($toolName, $parameters);
+        return [
+            'tool' => $toolName,
+            'parameters' => $parameters,
+            'result' => $result,
+            'success' => $result['success'] !== false,
+            'execution_type' => 'backend'
+        ];
+    } catch (Exception $e) {
+        return [
             'tool' => $toolName,
             'parameters' => $parameters,
             'result' => [
-                'success' => true,
-                'message' => "Frontend tool execution requested: $toolName",
-                'action' => 'execute_tool', // Specific action for show_relevant_content
-                'tool_name' => $toolName,
-                'parameters' => $parameters,
-                'execution_type' => 'frontend',
-                'query' => $parameters['query'] ?? null, // Extract query for frontend
-                'title' => $parameters['title'] ?? null, // Extract title for frontend
-                'timestamp' => date('Y-m-d H:i:s')
+                'success' => false,
+                'error' => $e->getMessage()
             ],
-            'success' => true,
-            'execution_type' => 'frontend'
+            'success' => false,
+            'execution_type' => 'backend'
         ];
     }
-    
-    return $backendResults;
+}
+
+/**
+ * Create frontend tool execution result
+ * @param string $toolName Tool name
+ * @param array $parameters Tool parameters
+ * @return array Frontend tool result
+ */
+function createFrontendToolResult($toolName, $parameters) {
+    return [
+        'tool' => $toolName,
+        'parameters' => $parameters,
+        'result' => [
+            'success' => true,
+            'message' => "Frontend tool execution requested: $toolName",
+            'action' => 'execute_tool',
+            'tool_name' => $toolName,
+            'parameters' => $parameters,
+            'execution_type' => 'frontend',
+            'query' => $parameters['query'] ?? null,
+            'title' => $parameters['title'] ?? null,
+            'timestamp' => date('Y-m-d H:i:s')
+        ],
+        'success' => true,
+        'execution_type' => 'frontend'
+    ];
 }
 
 
@@ -427,28 +437,17 @@ function createMCPToolInstance(string $toolKey): ?MCPToolInterface
  */
 function getAllMCPToolInstances(): array
 {
-    try {
-        $enabledTools = getEnabledMCPTools();
-        $instances = [];
-        
-        foreach ($enabledTools as $toolKey => $toolConfig) {
-            try {
-                $instance = createMCPToolInstance($toolKey);
-                if ($instance !== null && $instance->isAvailable()) {
-                    $instances[$toolKey] = $instance;
-                }
-            } catch (Exception $e) {
-                error_log("MCP Config Error: Failed to create instance for $toolKey: " . $e->getMessage());
-                // Continue with other tools instead of failing completely
-            }
+    $enabledTools = getEnabledMCPTools();
+    $instances = [];
+    
+    foreach ($enabledTools as $toolKey => $toolConfig) {
+        $instance = createMCPToolInstance($toolKey);
+        if ($instance?->isAvailable()) {
+            $instances[$toolKey] = $instance;
         }
-        
-        return $instances;
-        
-    } catch (Exception $e) {
-        error_log("MCP Config Error in getAllMCPToolInstances: " . $e->getMessage());
-        throw $e;
     }
+    
+    return $instances;
 }
 
 /**
